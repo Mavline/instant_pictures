@@ -1,78 +1,171 @@
 import Replicate from "replicate";
 import { z } from "zod";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 import { headers } from "next/headers";
 
-// Commented out unused imports to fix ESLint errors
-// import { Ratelimit } from "@upstash/ratelimit";
-// import { Redis } from "@upstash/redis";
+let ratelimit: Ratelimit | undefined;
 
-export const runtime = "edge";
-
-const apiSchema = z.object({
-  prompt: z.string().min(1).max(1000),
-  style: z.string().optional(),
-  seed: z.number().int().optional(),
-  apiKey: z.string().optional(),
-});
+// Add rate limiting if Upstash API keys are set, otherwise skip
+/* Временно отключено для разработки
+if (process.env.UPSTASH_REDIS_REST_URL) {
+  ratelimit = new Ratelimit({
+    redis: Redis.fromEnv(),
+    // Allow 5 requests per day (~1 prompt), then need to use API key
+    limiter: Ratelimit.fixedWindow(5, "1440 m"),
+    analytics: true,
+    prefix: "blinkshot",
+  });
+}
+*/
 
 export async function POST(req: Request) {
-  try {
-    // Get API key either from request or environment variable
-    const body = await req.json();
-    const parsedBody = apiSchema.safeParse(body);
+  let json = await req.json();
+  let { prompt, userAPIKey, iterativeMode, style } = z
+    .object({
+      prompt: z.string(),
+      iterativeMode: z.boolean(),
+      userAPIKey: z.string().optional(),
+      style: z.string().optional(),
+    })
+    .parse(json);
 
-    if (!parsedBody.success) {
-      return new Response(JSON.stringify({ error: "Invalid request body" }), {
-        status: 400,
-      });
+  // Используем правильную конфигурацию Replicate
+  const replicate = new Replicate({
+    auth: userAPIKey || process.env.REPLICATE_API_TOKEN,
+  });
+
+  /* Временно отключено для разработки
+  if (ratelimit && !userAPIKey) {
+    const identifier = getIPAddress();
+
+    const { success } = await ratelimit.limit(identifier);
+    if (!success) {
+      return Response.json(
+        "No requests left. Please add your own API key or try again in 24h.",
+        {
+          status: 429,
+        },
+      );
     }
+  }
+  */
 
-    const { prompt, style, seed, apiKey } = parsedBody.data;
+  if (style) {
+    prompt += `. Use a ${style} style for the image.`;
+  }
 
-    // Use provided API key or fall back to environment variable
-    const token = apiKey || process.env.REPLICATE_API_TOKEN;
+  try {
+    // Запускаем генерацию с FLUX Schnell
+    const input = {
+      prompt: prompt,
+      width: 1024,
+      height: 768,
+      seed: iterativeMode ? 123 : undefined,
+      steps: 3  // Важно! Это очень быстрая модель с всего 3 шагами
+    };
 
-    if (!token) {
-      return new Response(
-        JSON.stringify({ error: "Missing Replicate API token" }),
-        { status: 401 }
+    console.log("Sending request to Replicate with input:", input);
+
+    let output;
+    try {
+      output = await replicate.run(
+        "black-forest-labs/flux-schnell", 
+        { input }
+      );
+    } catch (replicateError: any) {
+      console.error("Error from Replicate:", replicateError);
+      
+      // Проверяем ошибку на наличие NSFW контента
+      if (replicateError.toString().includes("NSFW content")) {
+        // Base64 заглушка - простой квадрат с текстом
+        const placeholder = "iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAIAAADTED8xAAADMElEQVR4nOzVMQEAIAzAMMC/5+GiHCQKenXPzCzW3Y5A4gNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSBpAEkDSBpA0gCSBpA0gKQBJA0gaQBJA0gaQNIAkgaQNICkASQNIGkASQNIGkDSAJIGkDSApAEkDSD9xoYBS7p0M/IAAAAASUVORK5CYII=";
+        
+        return Response.json({
+          error: "Content filtered by safety system. Please change your prompt.",
+          fallback_image: true,
+          b64_json: placeholder,
+          timings: { inference: 0 }
+        });
+      }
+      
+      // Другие ошибки пробрасываем дальше
+      throw replicateError;
+    }
+    
+    console.log("Received output from Replicate:", output);
+
+    if (output === null || output === undefined) {
+      return Response.json({
+        error: "Received null or undefined from Replicate",
+      }, { status: 500 });
+    }
+    
+    // Получаем URL изображения
+    let imageUrl;
+    if (Array.isArray(output) && output.length > 0) {
+      imageUrl = output[0];
+    } else if (typeof output === 'string') {
+      imageUrl = output;
+    } else {
+      return Response.json(
+        { 
+          error: "Unexpected output format from Replicate",
+          outputType: typeof output,
+          outputValue: JSON.stringify(output)
+        },
+        { status: 500 }
       );
     }
 
-    const replicate = new Replicate({
-      auth: token,
-    });
-
-    // Create a prompt with the style if provided
-    const fullPrompt = style 
-      ? `${prompt} Style: ${style}` 
-      : prompt;
-
-    const output = await replicate.run(
-      "stability-ai/sdxl:8beff3369e81422112d93b89ca01426147c542da798112cf986b724c9977502f",
+    console.log("Downloading image from URL:", imageUrl);
+    
+    // Скачиваем изображение и конвертируем его в base64
+    try {
+      const imageResponse = await fetch(imageUrl);
+      const arrayBuffer = await imageResponse.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const base64Image = buffer.toString('base64');
+      
+      // Возвращаем данные в том же формате, что и Together.ai
+      return Response.json({
+        b64_json: base64Image,
+        timings: { inference: 0 }
+      });
+    } catch (fetchError) {
+      console.error("Error downloading image:", fetchError);
+      
+      // Если скачивание не удалось, вернём хотя бы URL
+      return Response.json({
+        imageUrl: imageUrl,
+        timings: { inference: 0 }
+      });
+    }
+    
+  } catch (e: any) {
+    console.error("Error from Replicate:", e);
+    
+    return Response.json(
+      { 
+        error: e.toString(),
+        stack: e.stack
+      },
       {
-        input: {
-          prompt: fullPrompt,
-          seed: seed || Math.floor(Math.random() * 1000000),
-          num_outputs: 1,
-        },
-      }
-    );
-
-    return new Response(JSON.stringify({ images: output }), {
-      status: 200,
-    });
-  } catch (error: any) {
-    console.error("Error generating images:", error);
-    return new Response(
-      JSON.stringify({ error: error.message || "Failed to generate images" }),
-      { status: 500 }
+        status: 500,
+      },
     );
   }
 }
 
-// Helper function to get IP address (commented out to fix ESLint errors)
-// function getIPAddress(req: Request) {
-//   const headersList = headers();
-//   return headersList.get("x-forwarded-for") || "unknown";
-// }
+export const runtime = "nodejs"; // Изменяем на nodejs для поддержки Buffer
+
+function getIPAddress() {
+  const FALLBACK_IP_ADDRESS = "0.0.0.0";
+  const forwardedFor = headers().get("x-forwarded-for");
+
+  if (forwardedFor) {
+    return forwardedFor.split(",")[0] ?? FALLBACK_IP_ADDRESS;
+  }
+
+  return headers().get("x-real-ip") ?? FALLBACK_IP_ADDRESS;
+}
