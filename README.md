@@ -2,8 +2,6 @@
 
 A real-time AI image generator featuring a starry background and gradient text effects. Generate amazing visuals with just a few words.
 
-![Instant pictures](./public/og-image.png)
-
 ## Features
 
 - Real-time image generation as you type
