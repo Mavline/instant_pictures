@@ -1,5 +1,5 @@
 {
-  "name": "blinkshot",
+  "name": "instantpictures",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -23,7 +23,7 @@
     "clsx": "^2.1.1",
     "dedent": "^1.5.3",
     "lucide-react": "^0.447.0",
-    "next": "14.2.14",
+    "next": "^14.2.14",
     "react": "^18",
     "react-dom": "^18",
     "react-hot-toast": "^2.4.1",
