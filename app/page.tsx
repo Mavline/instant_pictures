@@ -172,42 +172,6 @@ export default function Home() {
           </h1>
         </header>
 
-        {/* Контейнер с поздравлением на 8 марта */}
-        <div className="w-full flex flex-col items-center justify-center mb-6">
-          <div
-            style={{ 
-              backgroundImage: "url('/flux-image-1741430542221.png')", 
-              backgroundSize: "contain", 
-              backgroundPosition: "center",
-              backgroundRepeat: "no-repeat",
-              width: "600px",
-              height: "450px"
-            }}
-          />
-          
-          <div className="w-full max-w-[800px] mt-4">
-            <h2 
-              className="text-2xl font-semibold text-center" 
-              style={{ 
-                fontFamily: "cursive", 
-                background: "linear-gradient(to right, #ff69b4, #9370db, #3cb371)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-                display: "inline-block",
-                width: "100%"
-              }}
-            >
-              Поздравляю значимых женщин с праздником 8 марта!
-            </h2>
-            <div className="w-full pr-0">
-              <p className="text-base text-white mt-2 text-right italic whitespace-nowrap" style={{ textShadow: "1px 1px 2px black" }}>
-                Павел Коновалов
-              </p>
-            </div>
-          </div>
-        </div>
-
         <div className="flex justify-center">
           <form className="mt-6 w-full max-w-2xl">
             <fieldset>
