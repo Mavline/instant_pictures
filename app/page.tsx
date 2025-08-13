@@ -48,25 +48,27 @@ type ImageResponse = {
 
 // Компонент для отображения звезд
 function Stars() {
-  const [stars, setStars] = useState<{top: number; left: number; delay: number}[]>([]);
-  
+  const [stars, setStars] = useState<
+    { top: number; left: number; delay: number }[]
+  >([]);
+
   useEffect(() => {
     const starCount = 100;
     const newStars = [];
-    
+
     for (let i = 0; i < starCount; i++) {
       newStars.push({
         top: Math.random() * 100,
         left: Math.random() * 100,
-        delay: Math.random() * 5
+        delay: Math.random() * 5,
       });
     }
-    
+
     setStars(newStars);
   }, []);
-  
+
   return (
-    <div className="stars-container fixed inset-0 z-0 overflow-hidden pointer-events-none">
+    <div className="stars-container pointer-events-none fixed inset-0 z-0 overflow-hidden">
       {stars.map((star, i) => (
         <div
           key={i}
@@ -74,7 +76,7 @@ function Stars() {
           style={{
             top: `${star.top}%`,
             left: `${star.left}%`,
-            animationDelay: `${star.delay}s`
+            animationDelay: `${star.delay}s`,
           }}
         />
       ))}
@@ -151,7 +153,7 @@ export default function Home() {
   return (
     <div className="flex h-full flex-col">
       <Stars />
-      <div className="bg-gradient-to-r from-yellow-600 to-blue-600 p-2 text-center text-white flex justify-center">
+      <div className="flex justify-center bg-gradient-to-r from-yellow-600 to-blue-600 p-2 text-center text-white">
         <p className="text-balance">
           Produced by{" "}
           <a
@@ -164,11 +166,11 @@ export default function Home() {
           to automate your life
         </p>
       </div>
-      
+
       <div className="relative mt-3 flex h-full flex-col px-5">
-        <header className="flex justify-start mb-6">
-          <h1 className="text-5xl font-extrabold bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 text-transparent bg-clip-text drop-shadow-lg transform border-b-4 border-purple-500 pb-2">
-            Instant pictures
+        <header className="mb-6 flex justify-start">
+          <h1 className="transform border-b-4 border-purple-500 bg-gradient-to-r from-green-500 via-blue-500 to-purple-500 bg-clip-text pb-2 text-5xl font-extrabold text-transparent drop-shadow-lg">
+            Real-time AI Image Generator. Created by Acty.dev
           </h1>
         </header>
 
@@ -283,9 +285,14 @@ export default function Home() {
             <div className="mt-4 flex w-full max-w-4xl flex-col justify-center">
               <div className="relative">
                 {activeImage.fallback_image ? (
-                  <div className="bg-gray-800 rounded-lg p-4 flex flex-col items-center justify-center min-h-[400px]">
-                    <p className="text-red-500 text-xl mb-2">⚠️ Generation Error</p>
-                    <p className="text-gray-300 text-center">{activeImage.error || "Content blocked. Please change your prompt."}</p>
+                  <div className="bg-gray-800 flex min-h-[400px] flex-col items-center justify-center rounded-lg p-4">
+                    <p className="mb-2 text-xl text-red-500">
+                      ⚠️ Generation Error
+                    </p>
+                    <p className="text-center text-gray-300">
+                      {activeImage.error ||
+                        "Content blocked. Please change your prompt."}
+                    </p>
                   </div>
                 ) : (
                   <Image
@@ -293,7 +300,11 @@ export default function Home() {
                     blurDataURL={imagePlaceholder.blurDataURL}
                     width={1024}
                     height={768}
-                    src={activeImage?.b64_json ? `data:image/png;base64,${activeImage.b64_json}` : (activeImage?.imageUrl || '/placeholder-image.png')}
+                    src={
+                      activeImage?.b64_json
+                        ? `data:image/png;base64,${activeImage.b64_json}`
+                        : activeImage?.imageUrl || "/placeholder-image.png"
+                    }
                     alt=""
                     className={`${isFetching ? "animate-pulse" : ""} max-w-full rounded-lg object-cover shadow-sm shadow-black`}
                   />
@@ -301,8 +312,10 @@ export default function Home() {
                 {activeImage && !isFetching && !activeImage.fallback_image && (
                   <Button
                     onClick={() => {
-                      const link = document.createElement('a');
-                      link.href = activeImage?.b64_json ? `data:image/png;base64,${activeImage.b64_json}` : (activeImage?.imageUrl || '/placeholder-image.png');
+                      const link = document.createElement("a");
+                      link.href = activeImage?.b64_json
+                        ? `data:image/png;base64,${activeImage.b64_json}`
+                        : activeImage?.imageUrl || "/placeholder-image.png";
                       link.download = `flux-image-${Date.now()}.png`;
                       document.body.appendChild(link);
                       link.click();
@@ -345,7 +358,12 @@ export default function Home() {
                       blurDataURL={imagePlaceholder.blurDataURL}
                       width={1024}
                       height={768}
-                      src={generatedImage.image?.b64_json ? `data:image/png;base64,${generatedImage.image.b64_json}` : (generatedImage.image?.imageUrl || '/placeholder-image.png')}
+                      src={
+                        generatedImage.image?.b64_json
+                          ? `data:image/png;base64,${generatedImage.image.b64_json}`
+                          : generatedImage.image?.imageUrl ||
+                            "/placeholder-image.png"
+                      }
                       alt=""
                       className="max-w-full rounded-lg object-cover shadow-sm shadow-black"
                     />

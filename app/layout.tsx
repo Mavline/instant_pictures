@@ -10,7 +10,7 @@ const anonymousPro = Anonymous_Pro({
   variable: "--font-anonymous-pro",
 });
 
-let title = "Instantic - Real-Time AI Image Generator";
+let title = "Instant Image Generator";
 let description = "Create images in real-time with AI";
 let url = "https://www.instantic.art/";
 let ogimage = "https://www.instantic.art/og-image.png";
