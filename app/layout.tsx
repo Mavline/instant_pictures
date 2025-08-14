@@ -48,6 +48,16 @@ export default function RootLayout({
   return (
     <html lang="en" className={`h-full ${anonymousPro.variable} font-mono`}>
       <head>
+        {/* Google tag (gtag.js) */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-QL9F9K1K7H"></script>
+        <script>
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-QL9F9K1K7H');
+          `}
+        </script>
         <meta name="color-scheme" content="dark" />
       </head>
       <body
