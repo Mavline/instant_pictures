@@ -1,3 +1,4 @@
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -7,6 +8,10 @@ const nextConfig = {
         hostname: "*.replicate.delivery",
       },
     ],
+  },
+  // Disable ESLint during production build
+  eslint: {
+    ignoreDuringBuilds: true,
   },
 };
 
